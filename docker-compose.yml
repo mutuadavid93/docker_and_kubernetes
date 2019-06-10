@@ -1,0 +1,63 @@
+version: '3.7'
+
+services: 
+
+  nginx:
+    container_name: nginx_borg
+    volumes:
+      - certificates:/etc/letsencrypt/
+      - memory_cache:/etc/nginx/cache
+    build:
+      context: .
+      dockerfile: docker-nginx.dockerfile
+    ports: 
+      - 8647:80
+      - 443:443
+    env_file:
+      - ./.docker/env/common.env
+    networks: 
+      - djangoapp-network
+    links:
+      - django:django
+      
+
+  django:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    command: python /usr/src/app/manage.py runserver 0.0.0.0:8000
+    container_name: django_borg
+    volumes:
+      - .:/usr/src/app
+    ports: 
+      - 8000:8000
+    networks: 
+      - djangoapp-network
+    depends_on:
+      - postgresdb
+
+
+
+  postgresdb:
+    image: postgres
+    volumes:
+        # Pass volume named pg_data to mysql container
+      - pg_data:/var/lib/postgresql/data/
+    container_name: pg_borg
+    environment:
+      POSTGRES_PASSWORD: password@123
+      POSTGRES_USER: postgres
+    ports: 
+      - 8646:5432
+    networks: 
+      - djangoapp-network
+
+networks: 
+  djangoapp-network:
+    driver: bridge
+
+# Add volumes definition to create volume pg_data referenced above
+volumes:
+  pg_data:
+  certificates:
+  memory_cache:
